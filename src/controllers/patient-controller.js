@@ -2,21 +2,51 @@ const { Patient } = require('../models/index');
 const asyncHandler = require('express-async-handler');
 
 const createPatientProfile = asyncHandler(async(req, res) => {
-    try {
-        const response = await Patient.create(req.body);
-        return res.status(201).json({
-            message: "Successfully created profile",
-            success: true,
-            err: {},
-            data: response
+    const { name, email, password, pic, mobile, address } = req.body; //accepting data from front-end
+    if (!name || !email || !password) {
+        res.status(400);
+        throw new Error("Please Enter all the fields");
+    }
+    const userExist = await Patient.findOne({ email }); //query my database whether it exists or not from  user model
+    if (userExist) {
+        res.status(400);
+        throw new Error("User already Exists");
+    }
+    const user = await Patient.create({
+        name,
+        email,
+        password,
+        pic,
+        mobile,
+        address
+    });
+    if (user) {
+        res.status(201).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            pic: user.pic,
+            // token: generateToken(user._id),
         });
-    } catch (error) {
-        return res.status(500).json({
-            message: error.message,
-            success: false,
-            err: error.explanation,
-            data: {}
+    } else {
+        res.status(400);
+        throw new Error("Failed to Create the User");
+    }
+});
+const LoginPatient = asyncHandler(async(req, res) => {
+    const { email, password } = req.body;
+    const user = await Patient.findOne({ email });
+    if (user && (await user.matchPassword(password))) {
+        res.status(201).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            pic: user.pic,
+            // token: generateToken(user._id),
         });
+    } else {
+        res.status(401);
+        throw new Error("Invalid Email or Password");
     }
 });
 const getPatientProfile = asyncHandler(async(req, res) => {
@@ -58,4 +88,4 @@ const deletePatientProfile = asyncHandler(async(req, res) => {
         });
     }
 });
-module.exports = { createPatientProfile, getPatientProfile, deletePatientProfile };
+module.exports = { createPatientProfile, LoginPatient, getPatientProfile, deletePatientProfile };
